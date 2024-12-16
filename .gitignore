@@ -1,0 +1,3 @@
+./py-archive/.env
+__pycache__/
+.DS_STORE
