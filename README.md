@@ -28,3 +28,17 @@ python -m uvicorn main:app --reload
 When the application starts, navigate to the '/docs' to see all available endpoints.
 
 The '/folklore/{id}/download' endpoint gives a pdf, so must use from a browser or other tool where a PDF is a valid response 
+
+## Accessing AWS resources
+In order to access S3 downloads, make sure creds are available on the server this is running from in `~/.aws/credentials`
+```
+[default]
+aws_access_key_id = YOUR_KEY
+aws_secret_access_key = YOUR_SECRET
+```
+
+and the default region is set to us-west-1 in `~/.aws/config`
+```
+[default]
+region=us-east-1
+```

@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from routes import router as folklore_router
 import boto3
 
-config = dotenv_values(".env")
+config = dotenv_values("../.env")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,4 +19,3 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(folklore_router, tags=["folklore"], prefix="/folklore")
-
