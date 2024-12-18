@@ -17,8 +17,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 origins = [
-    "https://docker15547-env-7928981.us.reclaim.cloud/",
-    "https://env-7928981.us.reclaim.cloud/",
+    "https://docker15547-env-7928981.us.reclaim.cloud",
+    "https://env-7928981.us.reclaim.cloud",
     "http://localhost",
 ]
 
