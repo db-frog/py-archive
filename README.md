@@ -40,5 +40,15 @@ aws_secret_access_key = YOUR_SECRET
 and the default region is set to us-west-1 in `~/.aws/config`
 ```
 [default]
-region=us-east-1
+region=us-west-1
 ```
+
+## Dockerize for deployment
+To make a docker image, run:
+```
+docker build -t py-archive . --platform linux/amd64
+```
+
+The above command assumes deployment to a host running an amd64 architecture, which is required for Reclaim Cloud
+
+After building the image, push to docker hub and deploy in Reclaim Cloud using UI
