@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from typing import List
 from fastapi.responses import StreamingResponse
 
-from models import FolkloreCollection
+from .models import FolkloreCollection
 
 router = APIRouter()
 

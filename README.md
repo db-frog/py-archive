@@ -46,28 +46,9 @@ python -m pip install -r requirements.txt
 
 ### Run the Server
 ```sh
-uvicorn main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 Visit `http://localhost:8000/docs` for the interactive API documentation.
-
----
-
-## Frontend Setup (Vue 3 + Vite)
-
-### Install Dependencies
-```sh
-npm install
-```
-
-### Run in Development Mode
-```sh
-npm run dev
-```
-
-### Build for Production
-```sh
-npm run build
-```
 
 ---
 

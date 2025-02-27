@@ -3,12 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
-from routes import router as folklore_router
+from .routes import router as folklore_router
 import boto3
+from dotenv import load_dotenv
 import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    load_dotenv()
     app.mongodb_client = MongoClient(os.environ["ATLAS_URI"])
     app.database = app.mongodb_client[os.environ["DB_NAME"]]
     app.s3 = boto3.client("s3")
