@@ -32,6 +32,11 @@ def get_genre(genre: str, request: Request):
     folklore = list(request.app.database["Archive"].find({"folklore.genre": genre}))
     return folklore
 
+@router.get("/random", response_description="Get a single folklore entry randomly", response_model=List[FolkloreCollection])
+def random_folklore(request: Request):
+    folklore = list(request.app.database["Archive"].aggregate([{"$sample": {"size": 1}}]))
+    return folklore
+
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
 def find_folklore(id: str, request: Request):
     if (folklore := request.app.database["Archive"].find_one({"_id": ObjectId(id)})) is not None:
