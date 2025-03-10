@@ -12,6 +12,13 @@ def list_folklore(request: Request):
     folklore = list(request.app.database["Archive"].find(limit=500))
     return folklore
 
+@router.get("/paginated", response_description="List folklore specified by page size and page", response_model=List[FolkloreCollection])
+def list_paginated_folklore(request: Request, page_size: int = 20, page: int = 1):
+    page = max(page, 1)
+    page_size = max(min(page_size, 20), 1)
+    folklore = list(request.app.database["Archive"].find().skip((page - 1) * page_size).limit(page_size))
+    return folklore
+
 @router.get("/languages", response_description="List all languages of origin", response_model=List[str])
 def list_languages(request: Request):
     genres = list(request.app.database["Archive"].distinct('folklore.language_of_origin'))
@@ -36,6 +43,11 @@ def get_genre(genre: str, request: Request):
 def random_folklore(request: Request):
     folklore = list(request.app.database["Archive"].aggregate([{"$sample": {"size": 1}}]))
     return folklore
+
+@router.get("/count", response_description="Get the number of entries in the archive", response_model=int)
+def num_entries(request: Request):
+    num = request.app.database["Archive"].count_documents({})
+    return num
 
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
 def find_folklore(id: str, request: Request):
