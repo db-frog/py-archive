@@ -2,21 +2,33 @@ from bson import ObjectId
 from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from typing import List
 from fastapi.responses import StreamingResponse
+import json
 
 from .models import FolkloreCollection
 
 router = APIRouter()
+
+def filter_from_json_str(filters: str):
+    if not filters:
+        return {}
+    filters_dict: dict[str, List[str]] = json.loads(filters)
+    query_filters: dict[str, List[str]] = {} # Need to remove empty filters
+    for key in filters_dict:
+        if filters_dict[key]:
+            query_filters[f"folklore.{key}"] = {"$in": filters_dict[key]}
+    return query_filters
 
 @router.get("/", response_description="List all folklore", response_model=List[FolkloreCollection])
 def list_folklore(request: Request):
     folklore = list(request.app.database["Archive"].find(limit=500))
     return folklore
 
-@router.get("/paginated", response_description="List folklore specified by page size and page", response_model=List[FolkloreCollection])
-def list_paginated_folklore(request: Request, page_size: int = 20, page: int = 1):
+@router.get("/paginated", response_description="List folklore specified by page size, page, and optional filters", response_model=List[FolkloreCollection])
+def list_paginated_folklore(request: Request, page_size: int = 20, page: int = 1, filters: str = None):
+    query_filters = filter_from_json_str(filters)
     page = max(page, 1)
     page_size = max(min(page_size, 20), 1)
-    folklore = list(request.app.database["Archive"].find().skip((page - 1) * page_size).limit(page_size))
+    folklore = list(request.app.database["Archive"].find(query_filters).skip((page - 1) * page_size).limit(page_size))
     return folklore
 
 @router.get("/languages", response_description="List all languages of origin", response_model=List[str])
@@ -39,14 +51,19 @@ def get_genre(genre: str, request: Request):
     folklore = list(request.app.database["Archive"].find({"folklore.genre": genre}))
     return folklore
 
-@router.get("/random", response_description="Get a single folklore entry randomly", response_model=List[FolkloreCollection])
-def random_folklore(request: Request):
-    folklore = list(request.app.database["Archive"].aggregate([{"$sample": {"size": 1}}]))
+@router.get("/random", response_description="Get a single folklore entry randomly with optional filter", response_model=List[FolkloreCollection])
+def random_folklore(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    folklore = list(request.app.database["Archive"].aggregate([
+        {"$match": query_filters},
+        {"$sample": {"size": 1}}
+    ]))
     return folklore
 
-@router.get("/count", response_description="Get the number of entries in the archive", response_model=int)
-def num_entries(request: Request):
-    num = request.app.database["Archive"].count_documents({})
+@router.get("/count", response_description="Get the number of entries in the archive with optional filter", response_model=int)
+def num_entries(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    num = request.app.database["Archive"].count_documents(query_filters)
     return num
 
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
