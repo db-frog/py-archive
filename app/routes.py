@@ -66,6 +66,15 @@ def num_entries(request: Request, filters: str = None):
     num = request.app.database["Archive"].count_documents(query_filters)
     return num
 
+@router.get("/filters", response_description="Get available options for each filter field in the archive", response_model=dict[str, List[str]])
+def get_filters(request: Request):
+    languages = list(request.app.database["Archive"].distinct('folklore.language_of_origin'))
+    genres = list(request.app.database["Archive"].distinct('folklore.genre'))
+    return {
+        "language_of_origin": languages,
+        "genre": genres
+    }
+
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
 def find_folklore(id: str, request: Request):
     if (folklore := request.app.database["Archive"].find_one({"_id": ObjectId(id)})) is not None:
