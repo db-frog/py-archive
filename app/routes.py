@@ -13,9 +13,9 @@ def filter_from_json_str(filters: str):
         return {}
     filters_dict: dict[str, List[str]] = json.loads(filters)
     query_filters: dict[str, List[str]] = {} # Need to remove empty filters
-    for key in filters_dict:
-        if filters_dict[key]:
-            query_filters[f"folklore.{key}"] = {"$in": filters_dict[key]}
+    for field_key in filters_dict:
+        if len(filters_dict[field_key]) != 0:
+            query_filters[field_key] = {"$in": filters_dict[field_key]}
     return query_filters
 
 @router.get("/", response_description="List all folklore", response_model=List[FolkloreCollection])
@@ -66,14 +66,17 @@ def num_entries(request: Request, filters: str = None):
     num = request.app.database["Archive"].count_documents(query_filters)
     return num
 
-@router.get("/filters", response_description="Get available options for each filter field in the archive", response_model=dict[str, List[str]])
-def get_filters(request: Request):
-    languages = list(request.app.database["Archive"].distinct('folklore.language_of_origin'))
-    genres = list(request.app.database["Archive"].distinct('folklore.genre'))
-    return {
-        "language_of_origin": languages,
-        "genre": genres
-    }
+@router.get("/filters", response_description="Get available options for specified filter fields in the archive", response_model=dict[str, List[str]])
+def get_filters(request: Request, field_to_path: str = None):
+    if not field_to_path:
+        return []
+    field_to_path_dict: dict[str, str] = json.loads(field_to_path)
+    unique_options: dict[str, list[str]] = {}
+    for field_key in field_to_path_dict:
+        unique_options[field_key] = list(request.app.database["Archive"].distinct(field_to_path_dict[field_key]))
+        if None in unique_options[field_key]:
+            unique_options[field_key].remove(None)
+    return unique_options
 
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
 def find_folklore(id: str, request: Request):
