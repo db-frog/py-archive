@@ -18,9 +18,10 @@ def filter_from_json_str(filters: str):
             query_filters[field_key] = {"$in": filters_dict[field_key]}
     return query_filters
 
-@router.get("/", response_description="List all folklore", response_model=List[FolkloreCollection])
-def list_folklore(request: Request):
-    folklore = list(request.app.database["Archive"].find(limit=500))
+@router.get("/", response_description="List all folklore based on an optional filter", response_model=List[FolkloreCollection])
+def list_folklore(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    folklore = list(request.app.database["Archive"].find(query_filters).limit(500))
     return folklore
 
 @router.get("/paginated", response_description="List folklore specified by page size, page, and optional filters", response_model=List[FolkloreCollection])
