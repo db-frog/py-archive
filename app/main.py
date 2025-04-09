@@ -21,7 +21,7 @@ app = FastAPI(lifespan=lifespan)
 origins = [
     "https://docker15547-env-7928981.us.reclaim.cloud",
     "https://env-7928981.us.reclaim.cloud",
-    "http://localhost",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(

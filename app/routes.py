@@ -2,14 +2,34 @@ from bson import ObjectId
 from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from typing import List
 from fastapi.responses import StreamingResponse
+import json
 
 from .models import FolkloreCollection
 
 router = APIRouter()
 
-@router.get("/", response_description="List all folklore", response_model=List[FolkloreCollection])
-def list_folklore(request: Request):
-    folklore = list(request.app.database["Archive"].find(limit=500))
+def filter_from_json_str(filters: str):
+    if not filters:
+        return {}
+    filters_dict: dict[str, List[str]] = json.loads(filters)
+    query_filters: dict[str, List[str]] = {} # Need to remove empty filters
+    for field_key in filters_dict:
+        if len(filters_dict[field_key]) != 0:
+            query_filters[field_key] = {"$in": filters_dict[field_key]}
+    return query_filters
+
+@router.get("/", response_description="List all folklore based on an optional filter", response_model=List[FolkloreCollection])
+def list_folklore(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    folklore = list(request.app.database["Archive"].find(query_filters).limit(500))
+    return folklore
+
+@router.get("/paginated", response_description="List folklore specified by page size, page, and optional filters", response_model=List[FolkloreCollection])
+def list_paginated_folklore(request: Request, page_size: int = 20, page: int = 1, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    page = max(page, 1)
+    page_size = max(min(page_size, 20), 1)
+    folklore = list(request.app.database["Archive"].find(query_filters).skip((page - 1) * page_size).limit(page_size))
     return folklore
 
 @router.get("/languages", response_description="List all languages of origin", response_model=List[str])
@@ -31,6 +51,33 @@ def list_genres(request: Request):
 def get_genre(genre: str, request: Request):
     folklore = list(request.app.database["Archive"].find({"folklore.genre": genre}))
     return folklore
+
+@router.get("/random", response_description="Get a single folklore entry randomly with optional filter", response_model=List[FolkloreCollection])
+def random_folklore(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    folklore = list(request.app.database["Archive"].aggregate([
+        {"$match": query_filters},
+        {"$sample": {"size": 1}}
+    ]))
+    return folklore
+
+@router.get("/count", response_description="Get the number of entries in the archive with optional filter", response_model=int)
+def num_entries(request: Request, filters: str = None):
+    query_filters = filter_from_json_str(filters)
+    num = request.app.database["Archive"].count_documents(query_filters)
+    return num
+
+@router.get("/filters", response_description="Get available options for specified filter fields in the archive", response_model=dict[str, List[str]])
+def get_filters(request: Request, field_to_path: str = None):
+    if not field_to_path:
+        return []
+    field_to_path_dict: dict[str, str] = json.loads(field_to_path)
+    unique_options: dict[str, list[str]] = {}
+    for field_key in field_to_path_dict:
+        unique_options[field_key] = list(request.app.database["Archive"].distinct(field_to_path_dict[field_key]))
+        if None in unique_options[field_key]:
+            unique_options[field_key].remove(None)
+    return unique_options
 
 @router.get("/{id}", response_description="Get a single folklore entry by id", response_model=FolkloreCollection)
 def find_folklore(id: str, request: Request):
@@ -54,3 +101,4 @@ def download_folklore(id: str, request: Request):
                 )
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Folklore with ID {id} not found")
+
