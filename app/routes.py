@@ -11,26 +11,48 @@ router = APIRouter()
 def filter_from_json_str(filters: str):
     if not filters:
         return {}
-    filters_dict: dict[str, List[str]] = json.loads(filters)
-    query_filters: dict[str, List[str]] = {} # Need to remove empty filters
-    for field_key in filters_dict:
-        if len(filters_dict[field_key]) != 0:
-            query_filters[field_key] = {"$in": filters_dict[field_key]}
-    return query_filters
+    filters_dict: dict[str, List[str] | str] = json.loads(filters)
+    query_filters = {} # Need to remove empty filters
+    search_stage = None # If cleaned_full_text is in filters
+
+    for field_key, values in filters_dict.items():
+        if not values:
+            continue
+        if field_key == "cleaned_full_text":
+            search_stage = { "$search": { "index": "search", "text": {
+                "query": values,
+                "path": "cleaned_full_text"
+            }}}
+        else:
+            query_filters[field_key] = {"$in": values}
+    return query_filters, search_stage
 
 @router.get("/", response_description="List all folklore based on an optional filter", response_model=List[FolkloreCollection])
 def list_folklore(request: Request, filters: str = None):
-    query_filters = filter_from_json_str(filters)
-    folklore = list(request.app.database["Archive"].find(query_filters).limit(500))
-    return folklore
+    query_filters, search_stage = filter_from_json_str(filters)
+    if search_stage:
+        pipeline = [search_stage]
+        if query_filters:
+            pipeline.append({"$match": query_filters})
+        pipeline.append({"$limit": 500})
+        return list(request.app.database["Archive"].aggregate(pipeline))
+    else:
+        return list(request.app.database["Archive"].find(query_filters).limit(500))
 
 @router.get("/paginated", response_description="List folklore specified by page size, page, and optional filters", response_model=List[FolkloreCollection])
 def list_paginated_folklore(request: Request, page_size: int = 20, page: int = 1, filters: str = None):
-    query_filters = filter_from_json_str(filters)
+    query_filters, search_stage = filter_from_json_str(filters)
     page = max(page, 1)
     page_size = max(min(page_size, 20), 1)
-    folklore = list(request.app.database["Archive"].find(query_filters).skip((page - 1) * page_size).limit(page_size))
-    return folklore
+    if search_stage:
+        pipeline = [search_stage]
+        if query_filters:
+            pipeline.append({"$match": query_filters})
+        pipeline.append({"$skip": (page - 1) * page_size})
+        pipeline.append({"$limit": 500})
+        return list(request.app.database["Archive"].aggregate(pipeline))
+    else:
+        return list(request.app.database["Archive"].find(query_filters).skip((page - 1) * page_size).limit(page_size))
 
 @router.get("/languages", response_description="List all languages of origin", response_model=List[str])
 def list_languages(request: Request):
@@ -54,18 +76,26 @@ def get_genre(genre: str, request: Request):
 
 @router.get("/random", response_description="Get a single folklore entry randomly with optional filter", response_model=List[FolkloreCollection])
 def random_folklore(request: Request, filters: str = None):
-    query_filters = filter_from_json_str(filters)
-    folklore = list(request.app.database["Archive"].aggregate([
-        {"$match": query_filters},
-        {"$sample": {"size": 1}}
-    ]))
-    return folklore
+    query_filters, search_stage = filter_from_json_str(filters)
+    pipeline = []
+    if search_stage:
+        pipeline.append(search_stage)
+    if query_filters:
+        pipeline.append({"$match": query_filters})
+    pipeline.append({"$sample": {"size": 1}})
+    return list(request.app.database["Archive"].aggregate(pipeline))
 
 @router.get("/count", response_description="Get the number of entries in the archive with optional filter", response_model=int)
 def num_entries(request: Request, filters: str = None):
-    query_filters = filter_from_json_str(filters)
-    num = request.app.database["Archive"].count_documents(query_filters)
-    return num
+    query_filters, search_stage = filter_from_json_str(filters)
+    pipeline = []
+    if search_stage:
+        pipeline.append(search_stage)
+    if query_filters:
+        pipeline.append({"$match": query_filters})
+    pipeline.append({"$count": "total"})
+    res = list(request.app.database["Archive"].aggregate(pipeline))
+    return res[0]["total"] if res else 0
 
 @router.get("/filters", response_description="Get available options for specified filter fields in the archive", response_model=dict[str, List[str]])
 def get_filters(request: Request, field_to_path: str = None):
