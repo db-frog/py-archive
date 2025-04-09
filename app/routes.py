@@ -86,7 +86,7 @@ def find_folklore(id: str, request: Request):
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Folklore with ID {id} not found")
 
-'''@router.get("/{id}/download", response_description="Download a single folklore entry by id")
+@router.get("/{id}/download", response_description="Download a single folklore entry by id")
 def download_folklore(id: str, request: Request):
     if (folklore := request.app.database["Archive"].find_one({"_id": ObjectId(id)})) is not None:
         path = folklore["filename"]
@@ -101,4 +101,4 @@ def download_folklore(id: str, request: Request):
                 )
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Folklore with ID {id} not found")
-'''
+

@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     load_dotenv()
     app.mongodb_client = MongoClient(os.environ["ATLAS_URI"])
     app.database = app.mongodb_client[os.environ["DB_NAME"]]
-    #app.s3 = boto3.client("s3")
+    app.s3 = boto3.client("s3")
     yield
     app.mongodb_client.close()
 
