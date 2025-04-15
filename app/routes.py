@@ -1,12 +1,12 @@
 from bson import ObjectId
-from fastapi import APIRouter, Body, Request, Response, HTTPException, status
+from fastapi import APIRouter, Request, HTTPException, status, Depends
 from typing import List
 from fastapi.responses import StreamingResponse
 import json
 
+from .oidc_auth import oidc_auth
 from .models import FolkloreCollection
-
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(oidc_auth)])
 
 def filter_from_json_str(filters: str):
     if not filters:
