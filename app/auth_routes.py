@@ -63,8 +63,8 @@ async def callback(request: Request, code: str):
         value=session_id,
         httponly=True,  # Prevents JavaScript access (more secure)
         secure=True,
-        samesite="Lax",
-        max_age=900  # 15 mins
+        samesite="lax",
+        max_age=1800  # 30 mins
     )
     return response
 

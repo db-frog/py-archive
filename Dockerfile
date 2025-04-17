@@ -1,7 +1,11 @@
-FROM python:3.9
+FROM python:3.9-slim AS base
 WORKDIR /code
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-COPY ./app /code/app
-ENV PYTHONPATH "${PYTHONPATH}:/code/app"
-CMD ["fastapi", "run", "app/main.py", "--proxy-headers", "--port", "80"]
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./app ./app
+ENV PYTHONPATH=/code/app
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
