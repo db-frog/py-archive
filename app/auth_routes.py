@@ -77,11 +77,13 @@ async def current_user(request: Request):
 @router.get("/logout")
 async def logout(request: Request):
     # Remove the session from the store
-    session_store = request.app.state.session_store
     session_id = request.cookies.get("session_id")
-    if session_id and session_id in session_store:
-        session_store.delete(session_id)
+    id_token = request.app.state.session_store.get(session_id).get("id_token")
+
+    if session_id and session_id in request.app.state.session_store:
+        request.app.state.session_store.delete(session_id)
     logout_url = (
-        f"{request.app.auth.authority_url}/oidcLogout"
+        f"{request.app.auth.authority_url}/oidcLogout?id_token_hint={id_token}"
+        f"&post_logout_redirect_uri={request.app.auth.frontend_url}"
     )
     return RedirectResponse(logout_url)
