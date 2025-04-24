@@ -2,6 +2,8 @@ from bson import ObjectId
 from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from typing import List
 from fastapi.responses import StreamingResponse
+from sentence_transformers import SentenceTransformer
+
 import json
 
 from .models import FolkloreCollection
@@ -11,6 +13,9 @@ router = APIRouter()
 # Store thesaurus mapping to avoid repeated DB queries + small size
 mapto_mapfrom : dict[str, dict[str, List[str]]] = {}
 mapfrom_mapto : dict[str, dict[str, str]] = {}
+
+# Load an open-source embedding model
+model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
 
 @router.get("/", response_description="List all folklore based on an optional filter", response_model=List[FolkloreCollection])
 def list_folklore(request: Request, filters: str = None):
@@ -163,6 +168,7 @@ def filter_from_json_str(filters: str, request: Request):
     query_filters = {} # Need to remove empty filters
     search_stage = None # If cleaned_full_text is in filters
 
+    # Only 1 search stage allowed
     for field_key, values in filters_dict.items():
         if not values:
             continue
@@ -171,6 +177,18 @@ def filter_from_json_str(filters: str, request: Request):
                 "query": values,
                 "path": "cleaned_full_text"
             }}}
+        elif field_key == "cleaned_full_text_embedding":
+            query_embedding = model.encode(values, precision="float32").tolist()
+            search_stage = {
+                "$vectorSearch": {
+                    "index": "vector_text",
+                    "queryVector": query_embedding,
+                    "path": field_key,
+                    "exact": False,
+                    "limit": 10,
+                    "numCandidates": 100,
+                }
+            }
         else:
             reduced_key = field_key.split(".")[-1] # field_key has format path.field
             # Check if reduced_key has no mapping
