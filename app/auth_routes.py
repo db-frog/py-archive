@@ -80,8 +80,8 @@ async def logout(request: Request):
     session_id = request.cookies.get("session_id")
 
     if session_id and session_id in request.app.state.session_store:
-        request.app.state.session_store.delete(session_id)
         id_token = request.app.state.session_store.get(session_id).get("id_token")
+        request.app.state.session_store.delete(session_id)
         logout_url = (
             f"{request.app.auth.authority_url}/oidcLogout?id_token_hint={id_token}"
             f"&post_logout_redirect_uri={request.app.auth.frontend_url}"
